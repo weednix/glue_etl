@@ -1,0 +1,31 @@
+AWS glue is an etl tool used extract and load data to the database after transformation.
+
+It could be loaded to redshift database using jdbc connectivity.
+
+In order for that to happen we need to establish connectivity between glue and redshift.
+
+AWS glue connection should point to the redshift vpc and that vpc should have S3 endpoint, so that
+we can connect from vpc to S3 using aws private network.
+
+Our goal is to create AWS etl job to extract nested json file data from S3 bucket containing all the resource information from all accounts in the org and convert it into athena tables using AWS glue crawler.
+
+Below are the list of steps to carry out this etl process.
+
+(1) Run a crawler job to dump resource data in a json file in S3 bucket.
+(2) Create a athena table using the nested json file
+(3) Create a dynamic dataframe using athena table created above
+(4) Use the relationalize function on the dynamic dataframe created above to create a dataframe collection which is just a collection of individual dataframe created for each array
+(5) Separate dataframe for each array using select function and dump the content of dataframe in S3 bucket in the form of orc file
+(6) Use the orc file created in the step above to create a athena table for each array using aws glue crawler.
+
+Once athena tables are created, we can join them to get resource information about the account.
+
+Array tables are linked to their parent using a column called id which references a column in its parent block
+
+Relationalize example
+
+https://aws.amazon.com/blogs/big-data/simplify-querying-nested-json-with-the-aws-glue-relationalize-transform/
+
+blogdataoutput = glueContext.write_dynamic_frame.from_options(frame = blogdata, connection_type = "s3", connection_options = {"path": glue_relationalize_output_s3_path}, format = "orc", transformation_ctx = "blogdataoutput")
+
+
