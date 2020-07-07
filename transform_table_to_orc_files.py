@@ -10,7 +10,7 @@ def replace_dots(string):
     return string.replace('.', '_')
 
 
-def get_dataframe_collection_from_athena_table(db_name, table_name, s3_object_path):
+def get_dataframe_collection_from_athena_table(db_name, table_name, source_s3_object_path):
     '''
     Use relationalize function to flatten the data by creating individual data
     frame for each array associated with the main dynamic dataframe network_data.
@@ -35,7 +35,7 @@ def load_dataframe_as_orc_file_to_s3(df_name, bucket_name):
     Write dynamic frame into s3 bucket with the same name as dataframe.
     The content of the file in the bucket is in the form of orc file.
     '''
-    df = dfc.select('df_name')
+    df = dfc.select(df_name)
     response = glueContext.write_dynamic_frame.from_options(
         frame = df,
         connection_type = "s3",
@@ -46,7 +46,7 @@ def load_dataframe_as_orc_file_to_s3(df_name, bucket_name):
 
 
 # TODO: add click paramater parsing here, with descriptions of parameters
-def main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name):
+def main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name, df_name):
     dfc = get_dataframe_collection_from_athena_table(source_db_name, source_table_name, source_s3_object_path)
     load_dataframe_as_orc_file_to_s3("data_root", target_bucket_name)
     for df_name in dfc.keys():
@@ -54,5 +54,6 @@ def main(source_db_name, source_table_name, source_s3_object_path, target_bucket
 
 
 if __name__ == "__main__":
+    
     main()
 
