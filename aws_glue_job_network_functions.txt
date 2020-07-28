@@ -1,11 +1,10 @@
+import sys
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.utils import getResolvedOptions
 from awsglue.job import Job
 # TODO: make imports explicit.  Do not use glob include here.
 from awsglue.transforms import * 
-
-args = getResolvedOptions(sys.argv, ['JOB_NAME','source_db_name','source_table_name','source_s3_object_path','target_bucket_name'])
 
 def replace_dots(string):
     '''replace dots with underscore in string'''
@@ -53,10 +52,15 @@ def load_dataframe_as_orc_file_to_s3(df_name, bucket_name):
 
 
 # TODO: add click paramater parsing here, with descriptions of parameters
-def main(args[source_db_name], args[source_table_name], args[source_s3_object_path], args[target_bucket_name]):
-    dfc = get_dataframe_collection_from_athena_table(args[source_db_name], args[source_table_name], args[source_s3_object_path])
+def main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name):
+    args = getResolvedOptions(sys.argv, ['JOB_NAME','SOURCE_DB_NAME','SOURCE_TABLE_NAME','SOURCE_S3_OBJECT_PATH','TARGET_BUCKET_NAME'])
+    source_db_name = args['SOURCE_DB_NAME']
+    source_table_name = args['SOURCE_TABLE_NAME']
+    source_s3_object_path = args['SOURCE_S3_OBJECT_PATH']
+    target_bucket_name = args['TARGET_BUCKET_NAME']
+    dfc = get_dataframe_collection_from_athena_table(source_db_name, source_table_name, source_s3_object_path)
     for df_name in dfc.keys():
-        load_dataframe_as_orc_file_to_s3(df_name, args[target_bucket_name])
+        load_dataframe_as_orc_file_to_s3(df_name, target_bucket_name)
 
 
 if __name__ == "__main__":
