@@ -6,6 +6,12 @@ from awsglue.job import Job
 # TODO: make imports explicit.  Do not use glob include here.
 from awsglue.transforms import * 
 
+args = getResolvedOptions(sys.argv, ['JOB_NAME','SOURCE_DB_NAME','SOURCE_TABLE_NAME','SOURCE_S3_OBJECT_PATH','TARGET_BUCKET_NAME'])
+source_db_name = args['SOURCE_DB_NAME']
+source_table_name = args['SOURCE_TABLE_NAME']
+source_s3_object_path = args['SOURCE_S3_OBJECT_PATH']
+target_bucket_name = args['TARGET_BUCKET_NAME']
+
 def replace_dots(string):
     '''replace dots with underscore in string'''
     return string.replace("val.","").replace(".", "_")
@@ -31,11 +37,12 @@ def get_dataframe_collection_from_athena_table(db_name, table_name, source_s3_ob
     return dfc
 
 
-def load_dataframe_as_orc_file_to_s3(df_name, bucket_name):
+def load_dataframe_as_orc_file_to_s3(dfc, df_name, bucket_name):
     '''
     Write dynamic frame into s3 bucket with the same name as dataframe.
     The content of the file in the bucket is in the form of orc file.
     '''
+    glueContext = GlueContext(SparkContext.getOrCreate())
     df = dfc.select(df_name)
     new_df = df.toDF()
     print (type( new_df))
@@ -53,16 +60,11 @@ def load_dataframe_as_orc_file_to_s3(df_name, bucket_name):
 
 # TODO: add click paramater parsing here, with descriptions of parameters
 def main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name):
-    args = getResolvedOptions(sys.argv, ['JOB_NAME','SOURCE_DB_NAME','SOURCE_TABLE_NAME','SOURCE_S3_OBJECT_PATH','TARGET_BUCKET_NAME'])
-    source_db_name = args['SOURCE_DB_NAME']
-    source_table_name = args['SOURCE_TABLE_NAME']
-    source_s3_object_path = args['SOURCE_S3_OBJECT_PATH']
-    target_bucket_name = args['TARGET_BUCKET_NAME']
     dfc = get_dataframe_collection_from_athena_table(source_db_name, source_table_name, source_s3_object_path)
     for df_name in dfc.keys():
-        load_dataframe_as_orc_file_to_s3(df_name, target_bucket_name)
+        load_dataframe_as_orc_file_to_s3(dfc, df_name, target_bucket_name)
 
 
 if __name__ == "__main__":
     
-    main()
+    main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name)
