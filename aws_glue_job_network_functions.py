@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
@@ -6,21 +8,19 @@ from awsglue.job import Job
 # TODO: make imports explicit.  Do not use glob include here.
 from awsglue.transforms import * 
 
-args = getResolvedOptions(sys.argv, ['JOB_NAME','SOURCE_DB_NAME','SOURCE_TABLE_NAME','SOURCE_S3_OBJECT_PATH','TARGET_BUCKET_NAME'])
-source_db_name = args['SOURCE_DB_NAME']
-source_table_name = args['SOURCE_TABLE_NAME']
-source_s3_object_path = args['SOURCE_S3_OBJECT_PATH']
-target_bucket_name = args['TARGET_BUCKET_NAME']
 
 def replace_dots(string):
-    '''replace dots with underscore in string'''
+    '''
+    Replace dots with underscore in string.
+    Transform 'val.' into comma ','.
+    '''
     return string.replace("val.","").replace(".", "_")
 
 
 def get_dataframe_collection_from_athena_table(db_name, table_name, source_s3_object_path):
     '''
     Use relationalize function to flatten the data by creating individual data
-    frame for each array associated with the main dynamic dataframe network_data.
+    frame for each array associated with the main dynamic dataframe.
     These dataframes are collectively grouped into one data frame collection
     (dfc).
     '''
@@ -47,7 +47,7 @@ def load_dataframe_as_orc_file_to_s3(dfc, df_name, bucket_name):
     new_df = df.toDF()
     print (type( new_df))
     for oldName in new_df.schema.names:
-        new_df = new_df.withColumnRenamed(oldName, oldName.replace("val.","").replace(".","_"))
+        new_df = new_df.withColumnRenamed(oldName, replace_dots(oldName)
     df = df.fromDF(new_df, glueContext, "df")
     response = glueContext.write_dynamic_frame.from_options(
         frame = df,
@@ -58,13 +58,23 @@ def load_dataframe_as_orc_file_to_s3(dfc, df_name, bucket_name):
     )
 
 
-# TODO: add click paramater parsing here, with descriptions of parameters
-def main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name):
-    dfc = get_dataframe_collection_from_athena_table(source_db_name, source_table_name, source_s3_object_path)
+def main():
+    args = getResolvedOptions(sys.argv, [
+        'JOB_NAME',
+        'SOURCE_DB_NAME',
+        'SOURCE_TABLE_NAME',
+        'SOURCE_S3_OBJECT_PATH',
+        'TARGET_BUCKET_NAME',
+    ])
+    dfc = get_dataframe_collection_from_athena_table(
+        args['SOURCE_DB_NAME'],
+        args['SOURCE_TABLE_NAME'],
+        args['SOURCE_S3_OBJECT_PATH'],
+    )
     for df_name in dfc.keys():
-        load_dataframe_as_orc_file_to_s3(dfc, df_name, target_bucket_name)
+        load_dataframe_as_orc_file_to_s3(dfc, df_name, args['TARGET_BUCKET_NAME'])
 
 
 if __name__ == "__main__":
     
-    main(source_db_name, source_table_name, source_s3_object_path, target_bucket_name)
+    main()
